@@ -1,0 +1,32 @@
+<?php
+
+namespace App\Providers;
+
+
+// use Illuminate\Support\Facades\Gate;
+use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
+use App\Models\User;
+use Illuminate\Support\Facades\Gate;
+
+class AuthServiceProvider extends ServiceProvider
+{
+    /**
+     * The model to policy mappings for the application.
+     *
+     * @var array<class-string, class-string>
+     */
+    protected $policies = [
+        // 'App\Models\Model' => 'App\Policies\ModelPolicy',
+    ];
+
+    /**
+     * Register any authentication / authorization services.
+     */
+    public function boot(): void
+    {
+        // aturan akses menu: dipakai di config/adminlte.php lewat 'can'
+        Gate::define('admin', fn(User $user) => $user->role === 'admin');
+        Gate::define('posyandu', fn(User $user) => $user->role === 'posyandu');
+        Gate::define('ortu', fn(User $user) => $user->role === 'ortu');
+    }
+}

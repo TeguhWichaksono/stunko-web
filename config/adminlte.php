@@ -326,6 +326,12 @@ return [
             'icon' => 'fas fa-fw fa-id-card',
             'can' => 'posyandu',
         ],
+        [
+            'text' => 'Pengajuan Orang Tua',
+            'url' => 'posyandu/pengajuan',
+            'icon' => 'fas fa-fw fa-user-check',
+            'can' => 'posyandu',
+        ],
         // menu untuk orang tua
         [
             'text' => 'Dashboard',
@@ -343,6 +349,12 @@ return [
             'text' => 'Data Anak',
             'url' => 'ortu/anak',
             'icon' => 'fas fa-fw fa-child',
+            'can' => 'ortu',
+        ],
+        [
+            'text' => 'Pilih Posyandu',
+            'url' => 'ortu/posyandu',
+            'icon' => 'fas fa-fw fa-clinic-medical',
             'can' => 'ortu',
         ],
     ],

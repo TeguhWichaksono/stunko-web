@@ -34,4 +34,9 @@ class Anak extends Model
     {
         return $this->belongsTo(OrangTua::class);
     }
+    // satu anak punya banyak pemeriksaan (satu per bulan)
+    public function pengukuran()
+    {
+        return $this->hasMany(Pengukuran::class);
+    }
 }

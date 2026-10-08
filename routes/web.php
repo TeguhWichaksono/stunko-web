@@ -6,6 +6,9 @@ use App\Http\Controllers\Admin\PosyanduController;
 use App\Http\Controllers\PosyanduProfilController;
 use App\Http\Controllers\OrtuBiodataController;
 use App\Http\Controllers\OrtuAnakController;
+use App\Http\Controllers\OrtuPosyanduController;
+use App\Http\Controllers\PosyanduPengajuanController;
+
 // halaman awal langsung diarahkan ke login
 Route::get('/', function () {
     return redirect()->route('login');
@@ -48,6 +51,11 @@ Route::middleware(['auth', 'role:posyandu'])->prefix('posyandu')->name('posyandu
     // profil posyandu: tampilkan form dan simpan isiannya
     Route::get('/profil', [PosyanduProfilController::class, 'edit'])->name('profil.edit');
     Route::put('/profil', [PosyanduProfilController::class, 'update'])->name('profil.update');
+
+    // pengajuan dari orang tua: daftar, terima, dan tolak
+    Route::get('/pengajuan', [PosyanduPengajuanController::class, 'index'])->name('pengajuan.index');
+    Route::post('/pengajuan/{id}/terima', [PosyanduPengajuanController::class, 'terima'])->name('pengajuan.terima');
+    Route::post('/pengajuan/{id}/tolak', [PosyanduPengajuanController::class, 'tolak'])->name('pengajuan.tolak');
 });
 
 // halaman khusus orang tua
@@ -66,4 +74,8 @@ Route::middleware(['auth', 'role:ortu'])->prefix('ortu')->name('ortu.')->group(f
     Route::post('/anak', [OrtuAnakController::class, 'store'])->name('anak.store');
     Route::get('/anak/{id}/edit', [OrtuAnakController::class, 'edit'])->name('anak.edit');
     Route::put('/anak/{id}', [OrtuAnakController::class, 'update'])->name('anak.update');
+
+    // pilih posyandu: tampilkan pilihan dan kirim pengajuan
+    Route::get('/posyandu', [OrtuPosyanduController::class, 'index'])->name('posyandu.index');
+    Route::post('/posyandu', [OrtuPosyanduController::class, 'ajukan'])->name('posyandu.ajukan');
 });

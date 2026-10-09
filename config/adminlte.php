@@ -357,6 +357,18 @@ return [
             'icon' => 'fas fa-fw fa-clinic-medical',
             'can' => 'ortu',
         ],
+        [
+            'text' => 'Pemeriksaan Anak',
+            'url' => 'posyandu/pemeriksaan',
+            'icon' => 'fas fa-fw fa-stethoscope',
+            'can' => 'posyandu',
+        ],
+        [
+            'text' => 'Riwayat Pemeriksaan',
+            'url' => 'posyandu/riwayat',
+            'icon' => 'fas fa-fw fa-history',
+            'can' => 'posyandu',
+        ],
     ],
     /*
     |--------------------------------------------------------------------------

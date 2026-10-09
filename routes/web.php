@@ -8,6 +8,8 @@ use App\Http\Controllers\OrtuBiodataController;
 use App\Http\Controllers\OrtuAnakController;
 use App\Http\Controllers\OrtuPosyanduController;
 use App\Http\Controllers\PosyanduPengajuanController;
+use App\Http\Controllers\PosyanduPemeriksaanController;
+use App\Http\Controllers\PosyanduRiwayatController;
 
 // halaman awal langsung diarahkan ke login
 Route::get('/', function () {
@@ -56,6 +58,14 @@ Route::middleware(['auth', 'role:posyandu'])->prefix('posyandu')->name('posyandu
     Route::get('/pengajuan', [PosyanduPengajuanController::class, 'index'])->name('pengajuan.index');
     Route::post('/pengajuan/{id}/terima', [PosyanduPengajuanController::class, 'terima'])->name('pengajuan.terima');
     Route::post('/pengajuan/{id}/tolak', [PosyanduPengajuanController::class, 'tolak'])->name('pengajuan.tolak');
+
+    // pemeriksaan anak: daftar anak, form pemeriksaan, dan simpan hasilnya
+    Route::get('/pemeriksaan', [PosyanduPemeriksaanController::class, 'index'])->name('pemeriksaan.index');
+    Route::get('/pemeriksaan/{id}', [PosyanduPemeriksaanController::class, 'create'])->name('pemeriksaan.create');
+    Route::post('/pemeriksaan/{id}', [PosyanduPemeriksaanController::class, 'store'])->name('pemeriksaan.store');
+
+    // riwayat pemeriksaan: daftar, bisa disaring per bulan dan dicari per nama
+    Route::get('/riwayat', [PosyanduRiwayatController::class, 'index'])->name('riwayat.index');
 });
 
 // halaman khusus orang tua

@@ -369,6 +369,12 @@ return [
             'icon' => 'fas fa-fw fa-history',
             'can' => 'posyandu',
         ],
+        [
+            'text' => 'Informasi Anak',
+            'url' => 'posyandu/informasi-anak',
+            'icon' => 'fas fa-fw fa-child',
+            'can' => 'posyandu',
+        ],
     ],
     /*
     |--------------------------------------------------------------------------

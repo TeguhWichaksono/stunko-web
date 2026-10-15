@@ -10,6 +10,7 @@ use App\Http\Controllers\OrtuPosyanduController;
 use App\Http\Controllers\PosyanduPengajuanController;
 use App\Http\Controllers\PosyanduPemeriksaanController;
 use App\Http\Controllers\PosyanduRiwayatController;
+use App\Http\Controllers\PosyanduDashboardController;
 
 // halaman awal langsung diarahkan ke login
 Route::get('/', function () {
@@ -46,9 +47,8 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
 
 // halaman khusus posyandu
 Route::middleware(['auth', 'role:posyandu'])->prefix('posyandu')->name('posyandu.')->group(function () {
-    Route::get('/dashboard', function () {
-        return view('posyandu.dashboard');
-    })->name('dashboard');
+    // dashboard posyandu: angkanya dihitung di controller
+    Route::get('/dashboard', [PosyanduDashboardController::class, 'index'])->name('dashboard');
 
     // profil posyandu: tampilkan form dan simpan isiannya
     Route::get('/profil', [PosyanduProfilController::class, 'edit'])->name('profil.edit');
@@ -66,6 +66,11 @@ Route::middleware(['auth', 'role:posyandu'])->prefix('posyandu')->name('posyandu
 
     // riwayat pemeriksaan: daftar, bisa disaring per bulan dan dicari per nama
     Route::get('/riwayat', [PosyanduRiwayatController::class, 'index'])->name('riwayat.index');
+    // detail anak: biodata anak, biodata orang tua, dan riwayat pemeriksaan
+    Route::get('/anak/{id}', [PosyanduPemeriksaanController::class, 'detail'])->name('anak.detail');
+
+    // informasi anak: daftar semua anak di posyandu ini
+    Route::get('/informasi-anak', [PosyanduPemeriksaanController::class, 'informasi'])->name('informasi.index');
 });
 
 // halaman khusus orang tua

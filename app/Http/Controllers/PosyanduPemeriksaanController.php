@@ -150,4 +150,58 @@ class PosyanduPemeriksaanController extends Controller
             ->with('sukses', 'Pemeriksaan ' . $anak->nama . ' tersimpan. Status stunting: '
                 . $hasil['status_stunting'] . ', status gizi: ' . $hasil['status_gizi'] . '.');
     }
+    // halaman detail satu anak: biodata anak, biodata orang tua, dan riwayat pemeriksaannya
+    public function detail($id)
+    {
+        // hanya anak dari orang tua yang diterima di posyandu ini, selain itu 404
+        $anak = $this->anakSaya($id);
+        $anak->load('orangTua.user');
+
+        // riwayat pemeriksaan anak ini, terbaru di atas
+        $riwayat = $anak->pengukuran()->orderByDesc('tanggal_ukur')->get();
+
+        // sudah diperiksa bulan ini? dipakai untuk mengaktifkan tombol Periksa
+        $sudahBulanIni = $riwayat->where('periode', now()->format('Y-m'))->isNotEmpty();
+
+        return view('posyandu.pemeriksaan.detail', compact('anak', 'riwayat', 'sudahBulanIni'));
+    }
+
+    // daftar semua anak di posyandu ini, bisa dicari berdasarkan nama anak, NIK, atau nama orang tua
+    public function informasi(Request $request)
+    {
+        $posyandu = $this->posyanduSaya();
+
+        // profil belum lengkap: arahkan ke halaman profil dulu
+        if (!$posyandu->lengkap()) {
+            return redirect()->route('posyandu.profil.edit');
+        }
+
+        $request->validate(['cari' => 'nullable|string|max:100']);
+        $cari = $request->input('cari');
+
+        // hanya anak dari orang tua yang diterima di posyandu ini
+        $query = Anak::with('orangTua')
+            ->whereHas('orangTua', function ($q) use ($posyandu) {
+                $q->where('posyandu_id', $posyandu->id)
+                    ->where('status_pengajuan', 'diterima');
+            })
+            // total_periksa = jumlah pemeriksaan, terakhir = tanggal pemeriksaan terakhir
+            ->withCount('pengukuran as total_periksa')
+            ->withMax('pengukuran as terakhir', 'tanggal_ukur');
+
+        // kalau ada kata pencarian, saring
+        if ($cari) {
+            $query->where(function ($q) use ($cari) {
+                $q->where('nama', 'like', '%' . $cari . '%')
+                    ->orWhere('nik', 'like', '%' . $cari . '%')
+                    ->orWhereHas('orangTua', function ($o) use ($cari) {
+                        $o->where('nama_lengkap', 'like', '%' . $cari . '%');
+                    });
+            });
+        }
+
+        $daftar = $query->orderBy('nama')->get();
+
+        return view('posyandu.informasi', compact('daftar', 'cari'));
+    }
 }

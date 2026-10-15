@@ -26,7 +26,7 @@ class PosyanduPemeriksaanController extends Controller
 
         return Anak::whereHas('orangTua', function ($q) use ($posyandu) {
             $q->where('posyandu_id', $posyandu->id)
-              ->where('status_pengajuan', 'diterima');
+                ->where('status_pengajuan', 'diterima');
         })->findOrFail($id);
     }
 
@@ -45,7 +45,7 @@ class PosyanduPemeriksaanController extends Controller
         $daftar = Anak::with('orangTua')
             ->whereHas('orangTua', function ($q) use ($posyandu) {
                 $q->where('posyandu_id', $posyandu->id)
-                  ->where('status_pengajuan', 'diterima');
+                    ->where('status_pengajuan', 'diterima');
             })
             // bulan_ini = jumlah pemeriksaan bulan ini (0 atau 1)
             ->withCount(['pengukuran as bulan_ini' => function ($q) use ($periodeIni) {
@@ -66,7 +66,6 @@ class PosyanduPemeriksaanController extends Controller
 
         return view('posyandu.pemeriksaan.form', compact('anak'));
     }
-
     // simpan pemeriksaan: hitung usia, kirim ke FastAPI, simpan hasilnya
     public function store(Request $request, $id)
     {
@@ -80,8 +79,11 @@ class PosyanduPemeriksaanController extends Controller
             'berat' => 'required|numeric|min:1|max:40',
             'tinggi' => 'required|numeric|min:40|max:130',
             'lila' => 'nullable|numeric|min:5|max:30',
+            // cara ukur wajib diisi karena memengaruhi hitungan z-score
+            'cara_ukur' => 'required|in:terlentang,berdiri',
         ], [
             'tanggal_ukur.after_or_equal' => 'Tanggal ukur tidak boleh sebelum tanggal lahir anak.',
+            'cara_ukur.required' => 'Pilih cara ukur (terlentang atau berdiri).',
         ]);
 
         // hitung usia anak (dalam bulan) saat diukur: bulan penuh + sisa hari dibagi 30
@@ -114,13 +116,15 @@ class PosyanduPemeriksaanController extends Controller
                 $usia,
                 (float) $data['berat'],
                 (float) $data['tinggi'],
-                isset($data['lila']) ? (float) $data['lila'] : null
+                isset($data['lila']) ? (float) $data['lila'] : null,
+                $data['cara_ukur'] ?? null
             );
         } catch (Exception $e) {
             return back()->withInput()->with('galat', $e->getMessage());
         }
 
-        // simpan pemeriksaan beserta hasil prediksinya
+        // simpan pemeriksaan beserta hasil prediksi dan z-score
+        // tanda ?? null supaya tidak error kalau FastAPI belum mengirim z-score
         Pengukuran::create([
             'anak_id' => $anak->id,
             'posyandu_id' => $posyandu->id,
@@ -130,6 +134,10 @@ class PosyanduPemeriksaanController extends Controller
             'berat' => $data['berat'],
             'tinggi' => $data['tinggi'],
             'lila' => $data['lila'] ?? null,
+            'cara_ukur' => $data['cara_ukur'] ?? null,
+            'z_bb_u' => $hasil['zscore']['bb_u'] ?? null,
+            'z_tb_u' => $hasil['zscore']['tb_u'] ?? null,
+            'z_bb_tb' => $hasil['zscore']['bb_tb'] ?? null,
             'status_stunting' => $hasil['status_stunting'],
             'status_gizi' => $hasil['status_gizi'],
             'skor' => $hasil['skor'],
@@ -143,4 +151,3 @@ class PosyanduPemeriksaanController extends Controller
                 . $hasil['status_stunting'] . ', status gizi: ' . $hasil['status_gizi'] . '.');
     }
 }
-

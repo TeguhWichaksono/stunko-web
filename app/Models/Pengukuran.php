@@ -13,6 +13,7 @@ class Pengukuran extends Model
     protected $table = 'pengukuran';
 
     // kolom yang boleh diisi
+    // kolom yang boleh diisi
     protected $fillable = [
         'anak_id',
         'posyandu_id',
@@ -22,6 +23,10 @@ class Pengukuran extends Model
         'berat',
         'tinggi',
         'lila',
+        'cara_ukur',
+        'z_bb_u',
+        'z_tb_u',
+        'z_bb_tb',
         'status_stunting',
         'status_gizi',
         'skor',

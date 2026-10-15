@@ -77,6 +77,22 @@
                     @enderror
                 </div>
 
+                {{-- cara ukur tinggi badan, wajib diisi --}}
+                <div class="form-group">
+                    <label>Cara Ukur</label>
+                    <select name="cara_ukur" class="form-control @error('cara_ukur') is-invalid @enderror">
+                        <option value="">-- Pilih --</option>
+                        <option value="terlentang" {{ old('cara_ukur') == 'terlentang' ? 'selected' : '' }}>Terlentang (berbaring)</option>
+                        <option value="berdiri" {{ old('cara_ukur') == 'berdiri' ? 'selected' : '' }}>Berdiri</option>
+                    </select>
+                    <small class="text-muted">
+                        Di bawah 24 bulan idealnya terlentang, 24 bulan ke atas berdiri.
+                        Pilih sesuai cara pengukuran yang sebenarnya supaya z-score dikoreksi.
+                    </small>
+                    @error('cara_ukur')
+                        <span class="invalid-feedback">{{ $message }}</span>
+                    @enderror
+                </div>
                 <div class="form-group">
                     <label>LiLA (cm) <small class="text-muted">- boleh kosong</small></label>
                     <input type="number" step="0.1" name="lila" value="{{ old('lila') }}"

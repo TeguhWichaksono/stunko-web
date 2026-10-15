@@ -8,8 +8,15 @@ use Illuminate\Support\Facades\Http;
 class PrediksiService
 {
     // kirim data satu anak ke FastAPI, lalu kembalikan hasil prediksinya (array)
-    public function prediksi(string $jk, float $usiaBulan, float $berat, float $tinggi, ?float $lila = null): array
-    {
+    // $caraUkur: 'terlentang' atau 'berdiri', boleh kosong
+    public function prediksi(
+        string $jk,
+        float $usiaBulan,
+        float $berat,
+        float $tinggi,
+        ?float $lila = null,
+        ?string $caraUkur = null
+    ): array {
         // data yang dikirim, nama kuncinya harus sama dengan yang diminta FastAPI
         $data = [
             'jk' => $jk,
@@ -18,9 +25,12 @@ class PrediksiService
             'tinggi' => $tinggi,
         ];
 
-        // LiLA hanya dikirim kalau diisi
+        // LiLA dan cara ukur hanya dikirim kalau diisi
         if ($lila !== null) {
             $data['lila'] = $lila;
+        }
+        if ($caraUkur) {
+            $data['cara_ukur'] = $caraUkur;
         }
 
         try {

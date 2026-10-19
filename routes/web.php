@@ -54,10 +54,10 @@ Route::middleware(['auth', 'role:posyandu'])->prefix('posyandu')->name('posyandu
     Route::get('/profil', [PosyanduProfilController::class, 'edit'])->name('profil.edit');
     Route::put('/profil', [PosyanduProfilController::class, 'update'])->name('profil.update');
 
-    // pengajuan dari orang tua: daftar, terima, dan tolak
+    // pengajuan dari orang tua: daftar, detail, dan keputusan
     Route::get('/pengajuan', [PosyanduPengajuanController::class, 'index'])->name('pengajuan.index');
-    Route::post('/pengajuan/{id}/terima', [PosyanduPengajuanController::class, 'terima'])->name('pengajuan.terima');
-    Route::post('/pengajuan/{id}/tolak', [PosyanduPengajuanController::class, 'tolak'])->name('pengajuan.tolak');
+    Route::get('/pengajuan/{id}', [PosyanduPengajuanController::class, 'detail'])->name('pengajuan.detail');
+    Route::post('/pengajuan/{id}', [PosyanduPengajuanController::class, 'proses'])->name('pengajuan.proses');
 
     // pemeriksaan anak: daftar anak, form pemeriksaan, dan simpan hasilnya
     Route::get('/pemeriksaan', [PosyanduPemeriksaanController::class, 'index'])->name('pemeriksaan.index');
@@ -90,7 +90,10 @@ Route::middleware(['auth', 'role:ortu'])->prefix('ortu')->name('ortu.')->group(f
     Route::get('/anak/{id}/edit', [OrtuAnakController::class, 'edit'])->name('anak.edit');
     Route::put('/anak/{id}', [OrtuAnakController::class, 'update'])->name('anak.update');
 
-    // pilih posyandu: tampilkan pilihan dan kirim pengajuan
+    // ajukan anak ke posyandu: halaman pilih posyandu dan kirim pengajuan (per anak)
+    Route::get('/anak/{id}/ajukan', [OrtuAnakController::class, 'formAjukan'])->name('anak.ajukan.form');
+    Route::post('/anak/{id}/ajukan', [OrtuAnakController::class, 'ajukan'])->name('anak.ajukan');
+
+    // halaman Pilih Posyandu: daftar anak dan status pengajuannya
     Route::get('/posyandu', [OrtuPosyanduController::class, 'index'])->name('posyandu.index');
-    Route::post('/posyandu', [OrtuPosyanduController::class, 'ajukan'])->name('posyandu.ajukan');
 });

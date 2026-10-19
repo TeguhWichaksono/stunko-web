@@ -25,6 +25,7 @@ class OrangTua extends Model
         'kelurahan',
         'posyandu_id',
         'status_pengajuan',
+        'catatan_pengajuan',
     ];
 
     // biodata ini milik satu akun user

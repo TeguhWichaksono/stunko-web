@@ -24,7 +24,7 @@ class PosyanduPemeriksaanController extends Controller
     {
         $posyandu = $this->posyanduSaya();
 
-        return Anak::whereHas('orangTua', function ($q) use ($posyandu) {
+        return Anak::where('status', 'diterima')->whereHas('orangTua', function ($q) use ($posyandu) {
             $q->where('posyandu_id', $posyandu->id)
                 ->where('status_pengajuan', 'diterima');
         })->findOrFail($id);
@@ -42,7 +42,7 @@ class PosyanduPemeriksaanController extends Controller
 
         $periodeIni = now()->format('Y-m');
 
-        $daftar = Anak::with('orangTua')
+        $daftar = Anak::with('orangTua')->where('status', 'diterima')
             ->whereHas('orangTua', function ($q) use ($posyandu) {
                 $q->where('posyandu_id', $posyandu->id)
                     ->where('status_pengajuan', 'diterima');
@@ -180,7 +180,7 @@ class PosyanduPemeriksaanController extends Controller
         $cari = $request->input('cari');
 
         // hanya anak dari orang tua yang diterima di posyandu ini
-        $query = Anak::with('orangTua')
+        $query = Anak::with('orangTua')->where('status', 'diterima')
             ->whereHas('orangTua', function ($q) use ($posyandu) {
                 $q->where('posyandu_id', $posyandu->id)
                     ->where('status_pengajuan', 'diterima');

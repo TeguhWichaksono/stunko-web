@@ -17,10 +17,10 @@
     @endif
 
     <div class="card">
-        <div class="card-body p-0">
+        <div class="card-body p-0 table-responsive">
             <table class="table table-striped mb-0">
                 <thead>
-                    <tr>
+                    <tr class="text-nowrap">
                         <th>No</th>
                         <th>Nama Orang Tua</th>
                         <th>No. HP</th>
@@ -40,9 +40,15 @@
                             <td>{{ $o->nama_lengkap }}</td>
                             <td>{{ $o->no_hp }}</td>
                             <td>{{ $o->alamat }}</td>
-                            <td>{{ $o->rt }} / {{ $o->rw }}</td>
+                            <td class="text-nowrap">{{ $o->rt }} / {{ $o->rw }}</td>
                             <td>{{ $o->kelurahan }}</td>
-                            <td>{{ $o->anak_count }}</td>
+                            <td class="text-nowrap">
+                                {{ $o->anak_count }}
+                                {{-- penanda kalau ada anak yang belum diverifikasi --}}
+                                @if ($o->anak_menunggu > 0)
+                                    <span class="badge badge-warning">{{ $o->anak_menunggu }} menunggu verifikasi</span>
+                                @endif
+                            </td>
                             <td>
                                 @if ($o->status_pengajuan == 'menunggu')
                                     <span class="badge badge-warning">Menunggu</span>
@@ -52,22 +58,14 @@
                                     <span class="badge badge-danger">Ditolak</span>
                                 @endif
                             </td>
-                            <td>
-                                {{-- tombol hanya muncul untuk pengajuan yang masih menunggu --}}
-                                @if ($o->status_pengajuan == 'menunggu')
-                                    <form action="{{ route('posyandu.pengajuan.terima', $o->id) }}"
-                                          method="POST" class="d-inline">
-                                        @csrf
-                                        <button type="submit" class="btn btn-sm btn-success">Terima</button>
-                                    </form>
-
-                                    {{-- onsubmit memunculkan kotak konfirmasi sebelum menolak --}}
-                                    <form action="{{ route('posyandu.pengajuan.tolak', $o->id) }}"
-                                          method="POST" class="d-inline"
-                                          onsubmit="return confirm('Yakin menolak pengajuan ini?')">
-                                        @csrf
-                                        <button type="submit" class="btn btn-sm btn-danger">Tolak</button>
-                                    </form>
+                            <td class="text-nowrap">
+                                {{-- keputusan diambil di halaman detail, bukan langsung dari daftar --}}
+                                @if ($o->status_pengajuan == 'menunggu' || $o->anak_menunggu > 0)
+                                    <a href="{{ route('posyandu.pengajuan.detail', $o->id) }}"
+                                       class="btn btn-sm btn-warning">Periksa &amp; Putuskan</a>
+                                @else
+                                    <a href="{{ route('posyandu.pengajuan.detail', $o->id) }}"
+                                       class="btn btn-sm btn-info">Detail</a>
                                 @endif
                             </td>
                         </tr>

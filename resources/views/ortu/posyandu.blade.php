@@ -1,4 +1,4 @@
-{{-- halaman pilih posyandu dan status pengajuan orang tua --}}
+{{-- halaman Pilih Posyandu (orang tua): daftar anak, posyandu, status, dan tombol ajukan per anak --}}
 @extends('adminlte::page')
 
 @section('title', 'Pilih Posyandu')
@@ -16,103 +16,113 @@
         <div class="alert alert-danger">{{ session('galat') }}</div>
     @endif
 
-    {{-- kartu status pengajuan, tampil kalau sudah pernah mengajukan --}}
-    @if ($ortu->status_pengajuan && $ortu->posyandu)
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title">Pengajuan Anda</h3>
-            </div>
-            <div class="card-body">
-                <table class="table table-borderless mb-0">
-                    <tr>
-                        <th style="width: 220px">Posyandu</th>
-                        <td>{{ $ortu->posyandu->user->name }}</td>
-                    </tr>
-                    <tr>
-                        <th>Kelurahan / Wilayah</th>
-                        <td>{{ $ortu->posyandu->kelurahan }} / {{ $ortu->posyandu->wilayah }}</td>
-                    </tr>
-                    <tr>
-                        <th>Kepala Posyandu</th>
-                        <td>{{ $ortu->posyandu->nama_kepala }} ({{ $ortu->posyandu->no_hp }})</td>
-                    </tr>
-                    <tr>
-                        <th>Status</th>
-                        <td>
-                            @if ($ortu->status_pengajuan == 'menunggu')
-                                <span class="badge badge-warning">Menunggu persetujuan</span>
-                            @elseif ($ortu->status_pengajuan == 'diterima')
-                                <span class="badge badge-success">Diterima</span>
-                            @else
-                                <span class="badge badge-danger">Ditolak</span>
-                            @endif
-                        </td>
-                    </tr>
-                </table>
-            </div>
-        </div>
-    @endif
-
-    @if (!$syarat)
-        {{-- syarat belum terpenuhi: arahkan melengkapi biodata dan data anak --}}
+    {{-- syarat sebelum mengajukan: biodata lengkap dan sudah ada data anak --}}
+    @if (!$ortu->lengkap())
         <div class="alert alert-warning">
-            Sebelum mengajukan, lengkapi
-            <a href="{{ route('ortu.biodata.edit') }}">Biodata Orang Tua</a>
-            dan isi minimal satu <a href="{{ route('ortu.anak.index') }}">Data Anak</a>.
+            Sebelum mengajukan, lengkapi dulu
+            <a href="{{ route('ortu.biodata.edit') }}">Biodata Orang Tua</a>.
         </div>
-    @elseif (in_array($ortu->status_pengajuan, ['menunggu', 'diterima']))
-        {{-- sudah punya pengajuan aktif, daftar posyandu tidak ditampilkan --}}
+    @elseif ($daftar->isEmpty())
+        <div class="alert alert-warning">
+            Belum ada data anak. Tambahkan dulu di menu
+            <a href="{{ route('ortu.anak.index') }}">Data Anak</a>.
+        </div>
     @else
-        {{-- boleh mengajukan: tampilkan daftar posyandu --}}
-        @if ($ortu->status_pengajuan == 'ditolak')
-            <div class="alert alert-danger">
-                Pengajuan Anda ditolak. Silakan pilih posyandu lain.
-            </div>
-        @endif
-
         <div class="alert alert-info">
-            Pilih posyandu yang wilayahnya sesuai dengan alamat Anda:
-            <b>RT {{ $ortu->rt }} / RW {{ $ortu->rw }}, Kelurahan {{ $ortu->kelurahan }}</b>.
-        </div>
-
-        <div class="card">
-            <div class="card-body p-0">
-                <table class="table table-striped mb-0">
-                    <thead>
-                        <tr>
-                            <th>Nama Posyandu</th>
-                            <th>Kelurahan</th>
-                            <th>Wilayah</th>
-                            <th>Alamat</th>
-                            <th>Kepala / No. HP</th>
-                            <th>Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse ($daftar as $p)
-                            <tr>
-                                <td>{{ $p->user->name }}</td>
-                                <td>{{ $p->kelurahan }}</td>
-                                <td>{{ $p->wilayah }}</td>
-                                <td>{{ $p->alamat }}</td>
-                                <td>{{ $p->nama_kepala }}<br>{{ $p->no_hp }}</td>
-                                <td>
-                                    {{-- satu form kecil untuk tiap posyandu --}}
-                                    <form action="{{ route('ortu.posyandu.ajukan') }}" method="POST">
-                                        @csrf
-                                        <input type="hidden" name="posyandu_id" value="{{ $p->id }}">
-                                        <button type="submit" class="btn btn-sm btn-primary">Ajukan</button>
-                                    </form>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="6" class="text-center">Belum ada posyandu yang tersedia.</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
+            Ajukan tiap anak ke posyandu sesuai wilayah tempat tinggalnya.
+            Anak yang sudah diterima tetap di posyandunya, dan anak lain bisa diajukan ke posyandu yang berbeda.
         </div>
     @endif
+
+    <div class="card">
+        <div class="card-body p-0 table-responsive">
+            <table class="table table-striped mb-0">
+                <thead>
+                    <tr class="text-nowrap">
+                        <th>No</th>
+                        <th>Nama Anak</th>
+                        <th>Tanggal Lahir</th>
+                        <th>Posyandu</th>
+                        <th>Status</th>
+                        <th>Keterangan</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{-- kalau belum ada anak, tampilkan tulisan kosong --}}
+                    @forelse ($daftar as $a)
+                        <tr>
+                            <td>{{ $loop->iteration }}</td>
+                            <td>{{ $a->nama }}</td>
+                            <td class="text-nowrap">{{ $a->tanggal_lahir->format('d-m-Y') }}</td>
+
+                            {{-- posyandu pilihan anak ini beserta wilayah dan kontaknya --}}
+                            <td>
+                                @if ($a->posyandu)
+                                    {{ $a->posyandu->user->name }}
+                                    <br>
+                                    <small class="text-muted">
+                                        {{ $a->posyandu->kelurahan }} / {{ $a->posyandu->wilayah }}<br>
+                                        {{ $a->posyandu->nama_kepala }} ({{ $a->posyandu->no_hp }})
+                                    </small>
+                                @else
+                                    -
+                                @endif
+                            </td>
+
+                            {{-- status pengajuan anak ini --}}
+                            <td>
+                                @if ($a->status == 'belum')
+                                    <span class="badge badge-secondary">Belum diajukan</span>
+                                @elseif ($a->status == 'menunggu')
+                                    <span class="badge badge-warning">Menunggu</span>
+                                @elseif ($a->status == 'diterima')
+                                    <span class="badge badge-success">Diterima</span>
+                                @else
+                                    <span class="badge badge-danger">Ditolak</span>
+                                @endif
+                            </td>
+
+                            {{-- keterangan sesuai status, termasuk alasan penolakan --}}
+                            <td style="min-width: 220px">
+                                @if ($a->status == 'ditolak')
+                                    <small class="text-danger">Alasan penolakan: {{ $a->catatan ?: '-' }}</small>
+                                @elseif ($a->status == 'belum')
+                                    <small class="text-muted">Belum diajukan ke posyandu mana pun.</small>
+                                @elseif ($a->status == 'menunggu')
+                                    <small class="text-muted">Menunggu persetujuan posyandu.</small>
+                                @else
+                                    <small class="text-muted">Anak sudah terdaftar di posyandu ini.</small>
+                                @endif
+                            </td>
+
+                            <td class="text-nowrap">
+                                {{-- tombol hanya untuk anak yang belum diajukan atau ditolak --}}
+                                @if (in_array($a->status, ['belum', 'ditolak']))
+                                    @if ($ortu->lengkap())
+                                        <a href="{{ route('ortu.anak.ajukan.form', $a->id) }}"
+                                            class="btn btn-sm btn-primary">
+                                            {{ $a->status == 'ditolak' ? 'Ajukan Ulang' : 'Ajukan' }}
+                                        </a>
+                                    @else
+                                        <button class="btn btn-sm btn-primary" disabled>Ajukan</button>
+                                    @endif
+                                    @if ($a->status == 'ditolak')
+                                        <br><small class="text-muted">Perbaiki dulu datanya di Data Anak kalau
+                                            perlu.</small>
+                                    @endif
+                                @else
+                                    -
+                                @endif
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="7" class="text-center">Belum ada data anak.</td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
 @stop

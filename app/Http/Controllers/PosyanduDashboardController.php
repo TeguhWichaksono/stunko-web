@@ -23,10 +23,10 @@ class PosyanduDashboardController extends Controller
         $periodeIni = now()->format('Y-m');
 
         // semua anak yang orang tuanya diterima di posyandu ini
-        $anak = Anak::with('orangTua')
+        $anak = Anak::with('orangTua')->where('status', 'diterima')
             ->whereHas('orangTua', function ($q) use ($posyandu) {
                 $q->where('posyandu_id', $posyandu->id)
-                  ->where('status_pengajuan', 'diterima');
+                    ->where('status_pengajuan', 'diterima');
             })
             ->orderBy('nama')
             ->get();
@@ -38,7 +38,7 @@ class PosyanduDashboardController extends Controller
             ->orderByDesc('tanggal_ukur')
             ->get()
             ->groupBy('anak_id')
-            ->map(fn ($baris) => $baris->first());
+            ->map(fn($baris) => $baris->first());
 
         // anak yang sudah diperiksa bulan ini
         $idDiperiksa = Pengukuran::whereIn('anak_id', $anakIds)
@@ -73,7 +73,7 @@ class PosyanduDashboardController extends Controller
 
         // tabel: anak yang pemeriksaan terakhirnya Stunting atau Gizi Kurang (maksimal 10)
         $perluPerhatian = $terbaru
-            ->filter(fn ($p) => $p->status_stunting == 'Stunting' || $p->status_gizi == 'Gizi Kurang')
+            ->filter(fn($p) => $p->status_stunting == 'Stunting' || $p->status_gizi == 'Gizi Kurang')
             ->sortByDesc('tanggal_ukur')
             ->take(10);
 
@@ -82,7 +82,7 @@ class PosyanduDashboardController extends Controller
         for ($i = 5; $i >= 0; $i--) {
             $daftarBulan[] = now()->startOfMonth()->subMonths($i);
         }
-        $periodeTren = array_map(fn ($b) => $b->format('Y-m'), $daftarBulan);
+        $periodeTren = array_map(fn($b) => $b->format('Y-m'), $daftarBulan);
 
         // semua pemeriksaan 6 bulan terakhir, dikelompokkan per bulan
         $perBulan = Pengukuran::whereIn('anak_id', $anakIds)

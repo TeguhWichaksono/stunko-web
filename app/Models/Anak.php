@@ -15,6 +15,7 @@ class Anak extends Model
     // kolom yang boleh diisi dari form
     protected $fillable = [
         'orang_tua_id',
+        'posyandu_id',
         'nama',
         'nik',
         'jenis_kelamin',
@@ -22,6 +23,8 @@ class Anak extends Model
         'tanggal_lahir',
         'berat_lahir',
         'tinggi_lahir',
+        'status',
+        'catatan',
     ];
 
     // tanggal lahir dibaca sebagai tanggal, jadi mudah ditampilkan (d-m-Y)
@@ -34,6 +37,13 @@ class Anak extends Model
     {
         return $this->belongsTo(OrangTua::class);
     }
+
+    // posyandu yang dipilih untuk anak ini (kosong kalau belum diajukan)
+    public function posyandu()
+    {
+        return $this->belongsTo(Posyandu::class);
+    }
+
     // satu anak punya banyak pemeriksaan (satu per bulan)
     public function pengukuran()
     {

@@ -312,6 +312,18 @@ return [
             'icon' => 'fas fa-fw fa-clinic-medical',
             'can' => 'admin',
         ],
+        [
+            'text' => 'Daftar Bantuan',
+            'url' => 'admin/bantuan',
+            'icon' => 'fas fa-fw fa-hand-holding-medical',
+            'can' => 'admin',
+        ],
+        [
+            'text' => 'Jenis Bantuan',
+            'url' => 'admin/jenis-bantuan',
+            'icon' => 'fas fa-fw fa-capsules',
+            'can' => 'admin',
+        ],
 
         // menu untuk posyandu
         [
@@ -327,7 +339,7 @@ return [
             'can' => 'posyandu',
         ],
         [
-            'text' => 'Pengajuan Orang Tua',
+            'text' => 'Pengajuan Anak',
             'url' => 'posyandu/pengajuan',
             'icon' => 'fas fa-fw fa-user-check',
             'can' => 'posyandu',
@@ -374,6 +386,12 @@ return [
             'url' => 'posyandu/informasi-anak',
             'icon' => 'fas fa-fw fa-child',
             'can' => 'posyandu',
+        ],
+        [
+            'text' => 'Riwayat Pemeriksaan',
+            'url' => 'ortu/riwayat',
+            'icon' => 'fas fa-fw fa-history',
+            'can' => 'ortu',
         ],
     ],
     /*

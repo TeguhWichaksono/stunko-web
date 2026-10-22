@@ -65,7 +65,7 @@
 
         {{-- pengajuan yang menunggu persetujuan, dengan tautan ke halamannya --}}
         <div class="col-md-4 col-lg">
-            <a href="{{ route('posyandu.pengajuan.index') }}" class="text-dark">
+            <a href="{{ route('posyandu.pengajuan.index', ['status' => 'menunggu']) }}" class="text-dark">
                 <div class="info-box">
                     <span class="info-box-icon bg-secondary"><i class="fas fa-user-check"></i></span>
                     <div class="info-box-content">

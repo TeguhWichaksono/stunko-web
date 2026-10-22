@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Anak;
-use App\Models\OrangTua;
 use App\Models\Pengukuran;
 use App\Models\Posyandu;
 
@@ -22,12 +21,10 @@ class PosyanduDashboardController extends Controller
         // bulan ini, format 2026-10
         $periodeIni = now()->format('Y-m');
 
-        // semua anak yang orang tuanya diterima di posyandu ini
-        $anak = Anak::with('orangTua')->where('status', 'diterima')
-            ->whereHas('orangTua', function ($q) use ($posyandu) {
-                $q->where('posyandu_id', $posyandu->id)
-                    ->where('status_pengajuan', 'diterima');
-            })
+        // semua anak yang sudah diterima di posyandu ini
+        $anak = Anak::with('orangTua')
+            ->where('posyandu_id', $posyandu->id)
+            ->where('status', 'diterima')
             ->orderBy('nama')
             ->get();
         $anakIds = $anak->pluck('id');
@@ -38,7 +35,7 @@ class PosyanduDashboardController extends Controller
             ->orderByDesc('tanggal_ukur')
             ->get()
             ->groupBy('anak_id')
-            ->map(fn($baris) => $baris->first());
+            ->map(fn ($baris) => $baris->first());
 
         // anak yang sudah diperiksa bulan ini
         $idDiperiksa = Pengukuran::whereIn('anak_id', $anakIds)
@@ -51,9 +48,9 @@ class PosyanduDashboardController extends Controller
         $sudahBulanIni = $idDiperiksa->count();
         $persenBulanIni = $jumlahAnak > 0 ? round($sudahBulanIni / $jumlahAnak * 100) : 0;
 
-        // jumlah orang tua yang menunggu persetujuan
-        $pengajuanMenunggu = OrangTua::where('posyandu_id', $posyandu->id)
-            ->where('status_pengajuan', 'menunggu')
+        // jumlah anak yang menunggu persetujuan di posyandu ini
+        $pengajuanMenunggu = Anak::where('posyandu_id', $posyandu->id)
+            ->where('status', 'menunggu')
             ->count();
 
         // sebaran status stunting dan status gizi (berdasarkan pemeriksaan terbaru) untuk grafik donat
@@ -73,7 +70,7 @@ class PosyanduDashboardController extends Controller
 
         // tabel: anak yang pemeriksaan terakhirnya Stunting atau Gizi Kurang (maksimal 10)
         $perluPerhatian = $terbaru
-            ->filter(fn($p) => $p->status_stunting == 'Stunting' || $p->status_gizi == 'Gizi Kurang')
+            ->filter(fn ($p) => $p->status_stunting == 'Stunting' || $p->status_gizi == 'Gizi Kurang')
             ->sortByDesc('tanggal_ukur')
             ->take(10);
 
@@ -82,7 +79,7 @@ class PosyanduDashboardController extends Controller
         for ($i = 5; $i >= 0; $i--) {
             $daftarBulan[] = now()->startOfMonth()->subMonths($i);
         }
-        $periodeTren = array_map(fn($b) => $b->format('Y-m'), $daftarBulan);
+        $periodeTren = array_map(fn ($b) => $b->format('Y-m'), $daftarBulan);
 
         // semua pemeriksaan 6 bulan terakhir, dikelompokkan per bulan
         $perBulan = Pengukuran::whereIn('anak_id', $anakIds)

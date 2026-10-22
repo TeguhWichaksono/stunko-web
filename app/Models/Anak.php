@@ -49,4 +49,10 @@ class Anak extends Model
     {
         return $this->hasMany(Pengukuran::class);
     }
+
+    // catatan tindak lanjut bantuan untuk anak ini (kosong kalau belum pernah ditindaklanjuti)
+    public function bantuan()
+    {
+        return $this->hasOne(Bantuan::class);
+    }
 }

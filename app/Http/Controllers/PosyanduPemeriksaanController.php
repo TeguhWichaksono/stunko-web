@@ -18,16 +18,13 @@ class PosyanduPemeriksaanController extends Controller
         return Posyandu::firstOrCreate(['user_id' => auth()->id()]);
     }
 
-    // ambil satu anak, tapi hanya kalau orang tuanya diterima di posyandu ini
+    // ambil satu anak, tapi hanya kalau sudah diterima di posyandu ini
     // kalau bukan, otomatis muncul 404
     private function anakSaya($id)
     {
-        $posyandu = $this->posyanduSaya();
-
-        return Anak::where('status', 'diterima')->whereHas('orangTua', function ($q) use ($posyandu) {
-            $q->where('posyandu_id', $posyandu->id)
-                ->where('status_pengajuan', 'diterima');
-        })->findOrFail($id);
+        return Anak::where('posyandu_id', $this->posyanduSaya()->id)
+            ->where('status', 'diterima')
+            ->findOrFail($id);
     }
 
     // daftar anak yang siap diperiksa
@@ -42,11 +39,9 @@ class PosyanduPemeriksaanController extends Controller
 
         $periodeIni = now()->format('Y-m');
 
-        $daftar = Anak::with('orangTua')->where('status', 'diterima')
-            ->whereHas('orangTua', function ($q) use ($posyandu) {
-                $q->where('posyandu_id', $posyandu->id)
-                    ->where('status_pengajuan', 'diterima');
-            })
+        $daftar = Anak::with('orangTua')
+            ->where('posyandu_id', $posyandu->id)
+            ->where('status', 'diterima')
             // bulan_ini = jumlah pemeriksaan bulan ini (0 atau 1)
             ->withCount(['pengukuran as bulan_ini' => function ($q) use ($periodeIni) {
                 $q->where('periode', $periodeIni);
@@ -59,6 +54,59 @@ class PosyanduPemeriksaanController extends Controller
         return view('posyandu.pemeriksaan.index', compact('daftar'));
     }
 
+    // halaman detail satu anak: biodata anak, biodata orang tua, dan riwayat pemeriksaannya
+    public function detail($id)
+    {
+        // hanya anak yang sudah diterima di posyandu ini, selain itu 404
+        $anak = $this->anakSaya($id);
+        $anak->load('orangTua.user');
+
+        // riwayat pemeriksaan anak ini, terbaru di atas
+        $riwayat = $anak->pengukuran()->orderByDesc('tanggal_ukur')->get();
+
+        // sudah diperiksa bulan ini? dipakai untuk mengaktifkan tombol Periksa
+        $sudahBulanIni = $riwayat->where('periode', now()->format('Y-m'))->isNotEmpty();
+
+        return view('posyandu.pemeriksaan.detail', compact('anak', 'riwayat', 'sudahBulanIni'));
+    }
+
+    // daftar semua anak di posyandu ini, bisa dicari berdasarkan nama anak, NIK, atau nama orang tua
+    public function informasi(Request $request)
+    {
+        $posyandu = $this->posyanduSaya();
+
+        // profil belum lengkap: arahkan ke halaman profil dulu
+        if (!$posyandu->lengkap()) {
+            return redirect()->route('posyandu.profil.edit');
+        }
+
+        $request->validate(['cari' => 'nullable|string|max:100']);
+        $cari = $request->input('cari');
+
+        // hanya anak yang sudah diterima di posyandu ini
+        $query = Anak::with('orangTua')
+            ->where('posyandu_id', $posyandu->id)
+            ->where('status', 'diterima')
+            // total_periksa = jumlah pemeriksaan, terakhir = tanggal pemeriksaan terakhir
+            ->withCount('pengukuran as total_periksa')
+            ->withMax('pengukuran as terakhir', 'tanggal_ukur');
+
+        // kalau ada kata pencarian, saring (tanda kurung di closure menjaga syarat posyandu tetap berlaku)
+        if ($cari) {
+            $query->where(function ($q) use ($cari) {
+                $q->where('nama', 'like', '%' . $cari . '%')
+                    ->orWhere('nik', 'like', '%' . $cari . '%')
+                    ->orWhereHas('orangTua', function ($o) use ($cari) {
+                        $o->where('nama_lengkap', 'like', '%' . $cari . '%');
+                    });
+            });
+        }
+
+        $daftar = $query->orderBy('nama')->get();
+
+        return view('posyandu.informasi', compact('daftar', 'cari'));
+    }
+
     // tampilkan form pemeriksaan untuk satu anak
     public function create($id)
     {
@@ -66,6 +114,7 @@ class PosyanduPemeriksaanController extends Controller
 
         return view('posyandu.pemeriksaan.form', compact('anak'));
     }
+
     // simpan pemeriksaan: hitung usia, kirim ke FastAPI, simpan hasilnya
     public function store(Request $request, $id)
     {
@@ -149,59 +198,5 @@ class PosyanduPemeriksaanController extends Controller
         return redirect()->route('posyandu.pemeriksaan.index')
             ->with('sukses', 'Pemeriksaan ' . $anak->nama . ' tersimpan. Status stunting: '
                 . $hasil['status_stunting'] . ', status gizi: ' . $hasil['status_gizi'] . '.');
-    }
-    // halaman detail satu anak: biodata anak, biodata orang tua, dan riwayat pemeriksaannya
-    public function detail($id)
-    {
-        // hanya anak dari orang tua yang diterima di posyandu ini, selain itu 404
-        $anak = $this->anakSaya($id);
-        $anak->load('orangTua.user');
-
-        // riwayat pemeriksaan anak ini, terbaru di atas
-        $riwayat = $anak->pengukuran()->orderByDesc('tanggal_ukur')->get();
-
-        // sudah diperiksa bulan ini? dipakai untuk mengaktifkan tombol Periksa
-        $sudahBulanIni = $riwayat->where('periode', now()->format('Y-m'))->isNotEmpty();
-
-        return view('posyandu.pemeriksaan.detail', compact('anak', 'riwayat', 'sudahBulanIni'));
-    }
-
-    // daftar semua anak di posyandu ini, bisa dicari berdasarkan nama anak, NIK, atau nama orang tua
-    public function informasi(Request $request)
-    {
-        $posyandu = $this->posyanduSaya();
-
-        // profil belum lengkap: arahkan ke halaman profil dulu
-        if (!$posyandu->lengkap()) {
-            return redirect()->route('posyandu.profil.edit');
-        }
-
-        $request->validate(['cari' => 'nullable|string|max:100']);
-        $cari = $request->input('cari');
-
-        // hanya anak dari orang tua yang diterima di posyandu ini
-        $query = Anak::with('orangTua')->where('status', 'diterima')
-            ->whereHas('orangTua', function ($q) use ($posyandu) {
-                $q->where('posyandu_id', $posyandu->id)
-                    ->where('status_pengajuan', 'diterima');
-            })
-            // total_periksa = jumlah pemeriksaan, terakhir = tanggal pemeriksaan terakhir
-            ->withCount('pengukuran as total_periksa')
-            ->withMax('pengukuran as terakhir', 'tanggal_ukur');
-
-        // kalau ada kata pencarian, saring
-        if ($cari) {
-            $query->where(function ($q) use ($cari) {
-                $q->where('nama', 'like', '%' . $cari . '%')
-                    ->orWhere('nik', 'like', '%' . $cari . '%')
-                    ->orWhereHas('orangTua', function ($o) use ($cari) {
-                        $o->where('nama_lengkap', 'like', '%' . $cari . '%');
-                    });
-            });
-        }
-
-        $daftar = $query->orderBy('nama')->get();
-
-        return view('posyandu.informasi', compact('daftar', 'cari'));
     }
 }

@@ -11,6 +11,9 @@ use App\Http\Controllers\PosyanduPengajuanController;
 use App\Http\Controllers\PosyanduPemeriksaanController;
 use App\Http\Controllers\PosyanduRiwayatController;
 use App\Http\Controllers\PosyanduDashboardController;
+use App\Http\Controllers\OrtuRiwayatController;
+use App\Http\Controllers\AdminBantuanController;
+use App\Http\Controllers\AdminJenisBantuanController;
 
 // halaman awal langsung diarahkan ke login
 Route::get('/', function () {
@@ -43,6 +46,16 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('/posyandu', [PosyanduController::class, 'index'])->name('posyandu.index');
     Route::get('/posyandu/tambah', [PosyanduController::class, 'create'])->name('posyandu.create');
     Route::post('/posyandu', [PosyanduController::class, 'store'])->name('posyandu.store');
+
+    // daftar calon penerima bantuan (pemeriksaan terbaru tiap anak, diurutkan dari skor tertinggi)
+    Route::get('/bantuan', [AdminBantuanController::class, 'index'])->name('bantuan.index');
+
+    // jenis bantuan (susu): daftar, tambah, dan ubah
+    Route::get('/jenis-bantuan', [AdminJenisBantuanController::class, 'index'])->name('jenis-bantuan.index');
+    Route::get('/jenis-bantuan/tambah', [AdminJenisBantuanController::class, 'create'])->name('jenis-bantuan.create');
+    Route::post('/jenis-bantuan', [AdminJenisBantuanController::class, 'store'])->name('jenis-bantuan.store');
+    Route::get('/jenis-bantuan/{id}/edit', [AdminJenisBantuanController::class, 'edit'])->name('jenis-bantuan.edit');
+    Route::put('/jenis-bantuan/{id}', [AdminJenisBantuanController::class, 'update'])->name('jenis-bantuan.update');
 });
 
 // halaman khusus posyandu
@@ -54,10 +67,11 @@ Route::middleware(['auth', 'role:posyandu'])->prefix('posyandu')->name('posyandu
     Route::get('/profil', [PosyanduProfilController::class, 'edit'])->name('profil.edit');
     Route::put('/profil', [PosyanduProfilController::class, 'update'])->name('profil.update');
 
-    // pengajuan dari orang tua: daftar, detail, dan keputusan
+    // pengajuan per anak: daftar, detail, terima, dan tolak
     Route::get('/pengajuan', [PosyanduPengajuanController::class, 'index'])->name('pengajuan.index');
     Route::get('/pengajuan/{id}', [PosyanduPengajuanController::class, 'detail'])->name('pengajuan.detail');
-    Route::post('/pengajuan/{id}', [PosyanduPengajuanController::class, 'proses'])->name('pengajuan.proses');
+    Route::post('/pengajuan/{id}/terima', [PosyanduPengajuanController::class, 'terima'])->name('pengajuan.terima');
+    Route::post('/pengajuan/{id}/tolak', [PosyanduPengajuanController::class, 'tolak'])->name('pengajuan.tolak');
 
     // pemeriksaan anak: daftar anak, form pemeriksaan, dan simpan hasilnya
     Route::get('/pemeriksaan', [PosyanduPemeriksaanController::class, 'index'])->name('pemeriksaan.index');
@@ -96,4 +110,7 @@ Route::middleware(['auth', 'role:ortu'])->prefix('ortu')->name('ortu.')->group(f
 
     // halaman Pilih Posyandu: daftar anak dan status pengajuannya
     Route::get('/posyandu', [OrtuPosyanduController::class, 'index'])->name('posyandu.index');
+
+    // riwayat pemeriksaan anak (hanya lihat)
+    Route::get('/riwayat', [OrtuRiwayatController::class, 'index'])->name('riwayat.index');
 });

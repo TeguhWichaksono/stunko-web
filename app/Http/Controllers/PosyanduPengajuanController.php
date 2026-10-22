@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\OrangTua;
+use App\Models\Anak;
 use App\Models\Posyandu;
 use Illuminate\Http\Request;
 
@@ -14,8 +14,16 @@ class PosyanduPengajuanController extends Controller
         return Posyandu::firstOrCreate(['user_id' => auth()->id()]);
     }
 
-    // daftar pengajuan yang masuk ke posyandu ini
-    public function index()
+    // ambil satu anak yang diajukan ke posyandu ini, selain itu otomatis 404
+    private function anakDiajukan($id)
+    {
+        return Anak::where('posyandu_id', $this->posyanduSaya()->id)
+            ->where('status', '!=', 'belum')
+            ->findOrFail($id);
+    }
+
+    // daftar anak yang diajukan ke posyandu ini, bisa dicari dan disaring per status
+    public function index(Request $request)
     {
         $posyandu = $this->posyanduSaya();
 
@@ -24,131 +32,101 @@ class PosyanduPengajuanController extends Controller
             return redirect()->route('posyandu.profil.edit');
         }
 
-        // anak_count = jumlah anak, anak_menunggu = jumlah anak yang belum diverifikasi
-        $daftar = OrangTua::withCount([
-                'anak',
-                'anak as anak_menunggu' => function ($q) {
-                    $q->where('status', 'menunggu');
-                },
-            ])
+        $request->validate([
+            'cari' => 'nullable|string|max:100',
+            'status' => 'nullable|in:menunggu,diterima,ditolak',
+        ]);
+        $cari = $request->input('cari');
+        $status = $request->input('status');
+
+        // semua anak yang diajukan ke posyandu ini (yang belum diajukan tidak ikut)
+        $query = Anak::with('orangTua')
             ->where('posyandu_id', $posyandu->id)
-            ->orderByRaw("FIELD(status_pengajuan, 'menunggu', 'diterima', 'ditolak')")
-            ->orderBy('nama_lengkap')
+            ->where('status', '!=', 'belum');
+
+        // saring berdasarkan status yang dipilih
+        if ($status) {
+            $query->where('status', $status);
+        }
+
+        // cari berdasarkan nama anak, NIK anak, atau nama orang tua
+        if ($cari) {
+            $query->where(function ($q) use ($cari) {
+                $q->where('nama', 'like', '%' . $cari . '%')
+                    ->orWhere('nik', 'like', '%' . $cari . '%')
+                    ->orWhereHas('orangTua', function ($o) use ($cari) {
+                        $o->where('nama_lengkap', 'like', '%' . $cari . '%');
+                    });
+            });
+        }
+
+        // menunggu paling atas, lalu diterima, lalu ditolak
+        $daftar = $query->orderByRaw("FIELD(status, 'menunggu', 'diterima', 'ditolak')")
+            ->orderBy('nama')
             ->get();
 
-        return view('posyandu.pengajuan', compact('daftar'));
+        // jumlah anak per status (untuk ditampilkan di atas daftar)
+        $hitung = Anak::where('posyandu_id', $posyandu->id)
+            ->where('status', '!=', 'belum')
+            ->selectRaw('status, count(*) as jumlah')
+            ->groupBy('status')
+            ->pluck('jumlah', 'status');
+
+        return view('posyandu.pengajuan', compact('daftar', 'cari', 'status', 'hitung'));
     }
 
-    // halaman detail: biodata orang tua dan semua anaknya, dicek dulu sebelum diputuskan
+    // halaman detail satu anak: biodata anak, biodata orang tua, dan keputusan
     public function detail($id)
     {
-        $posyandu = $this->posyanduSaya();
+        $anak = $this->anakDiajukan($id);
+        $anak->load('orangTua.user');
 
-        // hanya pengajuan yang masuk ke posyandu ini, selain itu 404
-        $ortu = OrangTua::with(['user', 'anak' => function ($q) {
-                $q->orderBy('nama');
-            }])
-            ->where('posyandu_id', $posyandu->id)
-            ->findOrFail($id);
+        // anak lain milik orang tua yang sama, sebagai bahan pertimbangan
+        $saudara = $anak->orangTua->anak()
+            ->where('id', '!=', $anak->id)
+            ->with('posyandu.user')
+            ->orderBy('nama')
+            ->get();
 
-        return view('posyandu.pengajuan_detail', compact('ortu'));
+        return view('posyandu.pengajuan_detail', compact('anak', 'saudara'));
     }
 
-    // simpan keputusan: terima (per anak) atau tolak seluruh pengajuan
-    public function proses(Request $request, $id)
+    // terima satu anak
+    public function terima($id)
     {
-        $posyandu = $this->posyanduSaya();
+        $anak = $this->anakDiajukan($id);
 
-        $ortu = OrangTua::with('anak')
-            ->where('posyandu_id', $posyandu->id)
-            ->findOrFail($id);
-
-        $request->validate([
-            'aksi' => 'required|in:terima,tolak',
-            'catatan' => 'nullable|string|max:500',
-            'keputusan' => 'nullable|array',
-            'keputusan.*' => 'in:terima,tolak',
-        ]);
-
-        $aksi = $request->input('aksi');
-        $catatan = $request->input('catatan');
-
-        // ---- tolak seluruh pengajuan ----
-        if ($aksi === 'tolak') {
-            // hanya pengajuan yang masih menunggu yang bisa ditolak
-            if ($ortu->status_pengajuan !== 'menunggu') {
-                return back()->with('galat', 'Pengajuan ini sudah diproses.');
-            }
-            // alasan wajib diisi supaya orang tua tahu apa yang perlu diperbaiki
-            if (!$request->filled('catatan')) {
-                return back()->withInput()->withErrors([
-                    'catatan' => 'Isi alasan penolakan supaya orang tua tahu apa yang perlu diperbaiki.',
-                ]);
-            }
-
-            $ortu->update(['status_pengajuan' => 'ditolak', 'catatan_pengajuan' => $catatan]);
-
+        // hanya yang masih menunggu yang bisa diputuskan
+        if ($anak->status !== 'menunggu') {
             return redirect()->route('posyandu.pengajuan.index')
-                ->with('sukses', 'Pengajuan ditolak.');
+                ->with('galat', 'Pengajuan ini sudah diproses.');
         }
 
-        // ---- terima: putuskan tiap anak yang masih menunggu ----
-        if (!in_array($ortu->status_pengajuan, ['menunggu', 'diterima'])) {
-            return back()->with('galat', 'Pengajuan ini tidak bisa diproses.');
-        }
-
-        $anakMenunggu = $ortu->anak->where('status', 'menunggu');
-        if ($anakMenunggu->isEmpty()) {
-            return back()->with('galat', 'Tidak ada anak yang perlu diverifikasi.');
-        }
-
-        // kelompokkan anak berdasarkan pilihan posyandu
-        $keputusan = $request->input('keputusan', []);
-        $terimaId = [];
-        $tolakId = [];
-        foreach ($anakMenunggu as $a) {
-            $pilih = $keputusan[$a->id] ?? null;
-            if ($pilih === 'terima') {
-                $terimaId[] = $a->id;
-            }
-            if ($pilih === 'tolak') {
-                $tolakId[] = $a->id;
-            }
-        }
-
-        // semua anak yang menunggu harus sudah dipilih
-        if (count($terimaId) + count($tolakId) < $anakMenunggu->count()) {
-            return back()->withInput()->with('galat', 'Pilih Terima atau Tolak untuk setiap anak.');
-        }
-
-        // anak yang ditolak wajib ada alasannya
-        if ($tolakId && !$request->filled('catatan')) {
-            return back()->withInput()->withErrors([
-                'catatan' => 'Isi alasan karena ada anak yang ditolak.',
-            ]);
-        }
-
-        // minimal satu anak diterima (sekarang atau sebelumnya)
-        $sudahDiterima = $ortu->anak->where('status', 'diterima')->count();
-        if (!$terimaId && $sudahDiterima == 0) {
-            return back()->withInput()->with('galat',
-                'Minimal satu anak harus diterima. Kalau semua anak ditolak, gunakan tombol Tolak Pengajuan.');
-        }
-
-        // simpan keputusan tiap anak
-        foreach ($anakMenunggu as $a) {
-            if (in_array($a->id, $terimaId)) {
-                $a->update(['status' => 'diterima', 'catatan' => null]);
-            } else {
-                $a->update(['status' => 'ditolak', 'catatan' => $catatan]);
-            }
-        }
-
-        // pengajuan keluarga dinyatakan diterima
-        $ortu->update(['status_pengajuan' => 'diterima', 'catatan_pengajuan' => null]);
+        $anak->update(['status' => 'diterima', 'catatan' => null]);
 
         return redirect()->route('posyandu.pengajuan.index')
-            ->with('sukses', 'Keputusan tersimpan: ' . count($terimaId) . ' anak diterima, '
-                . count($tolakId) . ' anak ditolak.');
+            ->with('sukses', $anak->nama . ' diterima.');
+    }
+
+    // tolak satu anak, alasan wajib diisi supaya orang tua tahu apa yang perlu diperbaiki
+    public function tolak(Request $request, $id)
+    {
+        $anak = $this->anakDiajukan($id);
+
+        if ($anak->status !== 'menunggu') {
+            return redirect()->route('posyandu.pengajuan.index')
+                ->with('galat', 'Pengajuan ini sudah diproses.');
+        }
+
+        $request->validate([
+            'catatan' => 'required|string|max:500',
+        ], [
+            'catatan.required' => 'Isi alasan penolakan supaya orang tua tahu apa yang perlu diperbaiki.',
+        ]);
+
+        $anak->update(['status' => 'ditolak', 'catatan' => $request->catatan]);
+
+        return redirect()->route('posyandu.pengajuan.index')
+            ->with('sukses', $anak->nama . ' ditolak.');
     }
 }

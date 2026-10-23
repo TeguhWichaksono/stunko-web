@@ -14,6 +14,7 @@ use App\Http\Controllers\PosyanduDashboardController;
 use App\Http\Controllers\OrtuRiwayatController;
 use App\Http\Controllers\AdminBantuanController;
 use App\Http\Controllers\AdminJenisBantuanController;
+use App\Http\Controllers\AdminDashboardController;
 
 // halaman awal langsung diarahkan ke login
 Route::get('/', function () {
@@ -38,9 +39,8 @@ Route::get('/home', function () {
 
 // halaman khusus admin (puskesmas)
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
-    Route::get('/dashboard', function () {
-        return view('admin.dashboard');
-    })->name('dashboard');
+       // dashboard admin: angkanya dihitung di controller
+    Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
 
     // kelola akun posyandu
     Route::get('/posyandu', [PosyanduController::class, 'index'])->name('posyandu.index');
@@ -49,6 +49,14 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
 
     // daftar calon penerima bantuan (pemeriksaan terbaru tiap anak, diurutkan dari skor tertinggi)
     Route::get('/bantuan', [AdminBantuanController::class, 'index'])->name('bantuan.index');
+
+    // detail satu anak calon penerima bantuan
+    Route::get('/bantuan/{id}', [AdminBantuanController::class, 'detail'])->name('bantuan.detail');
+
+    // tindak lanjut bantuan: catat dihubungi, hasil dokter spesialis, dan keputusan
+    Route::post('/bantuan/{id}/hubungi', [AdminBantuanController::class, 'hubungi'])->name('bantuan.hubungi');
+    Route::post('/bantuan/{id}/hasil', [AdminBantuanController::class, 'hasil'])->name('bantuan.hasil');
+    Route::post('/bantuan/{id}/putuskan', [AdminBantuanController::class, 'putuskan'])->name('bantuan.putuskan');
 
     // jenis bantuan (susu): daftar, tambah, dan ubah
     Route::get('/jenis-bantuan', [AdminJenisBantuanController::class, 'index'])->name('jenis-bantuan.index');

@@ -51,4 +51,11 @@ class Pengukuran extends Model
     {
         return $this->belongsTo(Posyandu::class);
     }
+    // usia anak saat diukur dalam bentuk teks, contoh: "4 Tahun - 8 Bulan - 24 Hari"
+    public function getUsiaTeksAttribute()
+    {
+        $selisih = $this->anak->tanggal_lahir->diff($this->tanggal_ukur);
+
+        return $selisih->y . ' Tahun - ' . $selisih->m . ' Bulan - ' . $selisih->d . ' Hari';
+    }
 }

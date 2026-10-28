@@ -324,6 +324,12 @@ return [
             'icon' => 'fas fa-fw fa-capsules',
             'can' => 'admin',
         ],
+        [
+            'text' => 'Riwayat Pemeriksaan',
+            'url' => 'admin/riwayat',
+            'icon' => 'fas fa-fw fa-history',
+            'can' => 'admin',
+        ],
 
         // menu untuk posyandu
         [

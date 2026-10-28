@@ -15,6 +15,7 @@ use App\Http\Controllers\OrtuRiwayatController;
 use App\Http\Controllers\AdminBantuanController;
 use App\Http\Controllers\AdminJenisBantuanController;
 use App\Http\Controllers\AdminDashboardController;
+use App\Http\Controllers\AdminRiwayatController;
 
 // halaman awal langsung diarahkan ke login
 Route::get('/', function () {
@@ -39,13 +40,20 @@ Route::get('/home', function () {
 
 // halaman khusus admin (puskesmas)
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
-       // dashboard admin: angkanya dihitung di controller
+    // dashboard admin: angkanya dihitung di controller
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
 
     // kelola akun posyandu
     Route::get('/posyandu', [PosyanduController::class, 'index'])->name('posyandu.index');
     Route::get('/posyandu/tambah', [PosyanduController::class, 'create'])->name('posyandu.create');
     Route::post('/posyandu', [PosyanduController::class, 'store'])->name('posyandu.store');
+
+    // detail satu posyandu: biodata, ringkasan, dan daftar anaknya
+    Route::get('/posyandu/{id}', [PosyanduController::class, 'detail'])->whereNumber('id')->name('posyandu.detail');
+
+    // riwayat pemeriksaan seluruh posyandu: halaman daftar dan unduh Excel
+    Route::get('/riwayat', [AdminRiwayatController::class, 'index'])->name('riwayat.index');
+    Route::get('/riwayat/unduh', [AdminRiwayatController::class, 'unduh'])->name('riwayat.unduh');
 
     // daftar calon penerima bantuan (pemeriksaan terbaru tiap anak, diurutkan dari skor tertinggi)
     Route::get('/bantuan', [AdminBantuanController::class, 'index'])->name('bantuan.index');
